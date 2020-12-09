@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统监控</title>
+<script src="/static/lib/vue.js"></script>
+<script src="/static/lib/el/index.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/lib/el/index.css">
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #app {
+        width: 90%;
+    }
+</style>
+</head>
+
+<body>
+    <div id="app">
+        <el-tabs type="border-card" v-model="activityTab">
+            <el-tab-pane label="系统实时状态" name="realTime">
+                <el-row>
+                    <el-col :span="12">
+                        <div id="real-time-chart-cpu"></div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div id="real-time-chart-memory"></div>
+                    </el-col>
+                </el-row>
+            </el-tab-pane>
+            <el-tab-pane label="系统历史情况" name="history">
+                <el-row>
+                    <el-col :span="12">
+                        <div id="history-chart-cpu"></div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div id="history-chart-memory"></div>
+                    </el-col>
+                </el-row>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+</body>
+<script src="/static/lib/axios.min.js"></script>
+<script src="/static/lib/highcharts/highcharts.js"></script>
+<script>
+    let vue = new Vue({
+        el: '#app',
+        data: () => {
+            return {
+                activityTab: "realTime"
+            }
+        },
+        created() {
+
+        },
+        watch: {
+            activityTab(v) {
+                if (v == "history") {
+                    this.drawCpuHistoryChart()
+                    this.drawMemoryHistoryChart()
+                }
+            }
+        },
+        mounted() {
+            const loading = this.$loading({
+                lock: true,
+                text: '程序初始化中...',
+                spinner: 'el-icon-loading',
+                background: 'rgba(0, 0, 0, 0.7)'
+                });
+        
+            this.$nextTick(_ => {
+                setTimeout(() => {
+                loading.close();
+                }, 2000);
+                this.initRealTimeCpuChart()
+                this.initRealTimeMemoryChart()
+            })
+        },
+        methods: {
+            realTimeCpuDataHandle(chart) {
+                setInterval(_ => {
+                    axios.get("/getCpuStatus").then(res => {
+                        if (res.status == 200 && res.data.code == 0) {
+                            let data = res.data
+                            let total = data.data.total
+                            let use = data.data.use
+                            let time = data.data.time
+                            let percentage = ((use / total) * 100).toFixed(2)
+                            percentage = parseFloat(percentage)
+                            var series = chart.series[0]
+                            series.addPoint([time, percentage], true, true);
+                        } else {
+                            this.$notify.error({
+                                title: '请求失败',
+                                message: '获取CPU状态失败'
+                            });
+                        }
+                    })
+
+                }, 1000)
+            },
+            initRealTimeCpuChart() {
+                Highcharts.setOptions({
+                    global: {
+                        useUTC: false
+                    }
+                });
+                let option = {
+                    chart: {
+                        type: 'spline',
+                        events: {
+                            load: function () {
+                                vue.realTimeCpuDataHandle(this)
+                            }
+                        }
+                    },
+                    title: {
+                        text: '实时CPU占有'
+                    },
+                    subtitle: {
+                        text: '数据来源：模拟生成'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        tickPixelInterval: 150
+                    },
+                    yAxis: {
+                        title: {
+                            text: '百分比'
+                        },
+                        max: 100,
+                        min: 0
+                    },
+                    tooltip: {
+                        formatter: function () {
+                            return '<b>' + this.series.name + '</b><br/>' +
+                                Highcharts.numberFormat(this.y, 2) + '<br/>' +
+                                Highcharts.dateFormat('%H:%M:%S', this.x);
+                        }
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    series: [
+                        {
+                            name: 'CPU占用',
+                            data: (function () {
+                                // 生成随机值
+                                var data = [],
+                                    time = (new Date()).getTime(),
+                                    i;
+                                for (i = -10; i <= 0; i += 1) {
+                                    data.push({
+                                        x: time + i * 1000,
+                                        y: 0
+                                    });
+                                }
+                                return data;
+                            }())
+                        }
+                    ]
+                }
+                Highcharts.chart('real-time-chart-cpu', option)
+            },
+            realTimeMemoryDataHandle(chart) {
+                setInterval(_ => {
+                    axios.get("/getMemoryStatus").then(res => {
+                        if (res.status == 200 && res.data.code == 0) {
+                            let data = res.data
+                            let total = data.data.total
+                            let use = data.data.use
+                            let time = data.data.time
+                            let percentage = ((use / total) * 100).toFixed(2)
+                            percentage = parseFloat(percentage)
+                            var series = chart.series[0]
+                            series.addPoint([time, percentage], true, true);
+                        } else {
+                            this.$notify.error({
+                                title: '请求失败',
+                                message: '获取CPU状态失败'
+                            });
+                        }
+                    })
+                }, 1000)
+            },
+            initRealTimeMemoryChart() {
+                Highcharts.setOptions({
+                    global: {
+                        useUTC: false
+                    }
+                });
+                let option = {
+                    chart: {
+                        type: 'spline',
+                        events: {
+                            load: function () {
+                                vue.realTimeMemoryDataHandle(this)
+                            }
+                        }
+                    },
+                    title: {
+                        text: '实时内存占有'
+                    },
+                    subtitle: {
+                        text: '数据来源：模拟生成'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        tickPixelInterval: 150
+                    },
+                    yAxis: {
+                        title: {
+                            text: '百分比'
+                        },
+                        max: 100,
+                        min: 0
+                    },
+                    tooltip: {
+                        formatter: function () {
+                            return '<b>' + this.series.name + '</b><br/>' +
+                                Highcharts.numberFormat(this.y, 2) + '<br/>' +
+                                Highcharts.dateFormat('%H:%M:%S', this.x);
+                        }
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    series: [
+                        {
+                            name: '内存占用',
+                            data: (function () {
+                                // 生成随机值
+                                var data = [],
+                                    time = (new Date()).getTime(),
+                                    i;
+                                for (i = -10; i <= 0; i += 1) {
+                                    data.push({
+                                        x: time + i * 1000,
+                                        y: 0
+                                    });
+                                }
+                                return data;
+                            }())
+                        }
+                    ]
+                }
+                Highcharts.chart('real-time-chart-memory', option)
+            }
+            ,
+            drawCpuHistoryChart() {
+                axios.get("/getCpuHistoryStatus").then(res => {
+                    if (res.status == 200 && res.data.code == 0) {
+                        let data = res.data
+                        this.$notify({
+                            title: '成功',
+                            message: '获取CPU历史使用数据成功',
+                            type: 'success'
+                        });
+                        let records = data.data
+                        let result = []
+                        records.forEach(record => {
+                            let time = record.time
+                            let use = record.use
+                            let total = record.total
+                            let percentage = ((use / total) * 100).toFixed(2)
+                            percentage = parseFloat(percentage)
+                            result.push([time, percentage])
+                        });
+                        this._initCpuHistoryChart(result)
+                    } else {
+                        this.$notify.error({
+                            title: '请求失败',
+                            message: '获取CPU历史使用数据失败'
+                        });
+                    }
+                })
+            },
+            _initCpuHistoryChart(data) {
+                let option = {
+                    chart: {
+                        zoomType: 'x'
+                    },
+                    title: {
+                        text: 'CPU历史使用率'
+                    },
+                    subtitle: {
+                        text: document.ontouchstart === undefined ?
+                            '鼠标拖动可以进行缩放' : '手势操作进行缩放'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        dateTimeLabelFormats: {
+                            millisecond: '%H:%M:%S.%L',
+                            second: '%H:%M:%S',
+                            minute: '%H:%M',
+                            hour: '%H:%M',
+                            day: '%m-%d',
+                            week: '%m-%d',
+                            month: '%Y-%m',
+                            year: '%Y'
+                        }
+                    },
+                    tooltip: {
+                        dateTimeLabelFormats: {
+                            millisecond: '%H:%M:%S.%L',
+                            second: '%H:%M:%S',
+                            minute: '%H:%M',
+                            hour: '%H:%M',
+                            day: '%Y-%m-%d',
+                            week: '%m-%d',
+                            month: '%Y-%m',
+                            year: '%Y'
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: '百分比'
+                        },
+                        max: 100,
+                        min: 0
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    plotOptions: {
+                        area: {
+                            fillColor: {
+                                linearGradient: {
+                                    x1: 0,
+                                    y1: 0,
+                                    x2: 0,
+                                    y2: 1
+                                },
+                                stops: [
+                                    [0, new Highcharts.getOptions().colors[0]],
+                                    [1, new Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                                ]
+                            },
+                            marker: {
+                                radius: 2
+                            },
+                            lineWidth: 1,
+                            states: {
+                                hover: {
+                                    lineWidth: 1
+                                }
+                            },
+                            threshold: null
+                        }
+                    },
+                    series: [{
+                        type: 'area',
+                        name: 'CPU使用率',
+                        data: data
+                    }]
+                }
+                Highcharts.chart('history-chart-cpu', option)
+            }
+
+            ,
+            drawMemoryHistoryChart() {
+                axios.get("/getMemoryHistoryStatus").then(res => {
+                    if (res.status == 200 && res.data.code == 0) {
+                        let data = res.data
+                        this.$notify({
+                            title: '成功',
+                            message: '获取内存历史使用数据成功',
+                            type: 'success'
+                        });
+                        let records = data.data
+                        let result = []
+                        records.forEach(record => {
+                            let time = record.time
+                            let use = record.use
+                            let total = record.total
+                            let percentage = ((use / total) * 100).toFixed(2)
+                            percentage = parseFloat(percentage)
+                            result.push([time, percentage])
+                        });
+                        this._initMemoryHistoryChart(result)
+                    } else {
+                        this.$notify.error({
+                            title: '请求失败',
+                            message: '获取内存历史使用数据失败'
+                        });
+                    }
+                })
+            },
+            _initMemoryHistoryChart(data) {
+                let option = {
+                    chart: {
+                        zoomType: 'x'
+                    },
+                    title: {
+                        text: '内存历史使用率'
+                    },
+                    subtitle: {
+                        text: document.ontouchstart === undefined ?
+                            '鼠标拖动可以进行缩放' : '手势操作进行缩放'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        dateTimeLabelFormats: {
+                            millisecond: '%H:%M:%S.%L',
+                            second: '%H:%M:%S',
+                            minute: '%H:%M',
+                            hour: '%H:%M',
+                            day: '%m-%d',
+                            week: '%m-%d',
+                            month: '%Y-%m',
+                            year: '%Y'
+                        }
+                    },
+                    tooltip: {
+                        dateTimeLabelFormats: {
+                            millisecond: '%H:%M:%S.%L',
+                            second: '%H:%M:%S',
+                            minute: '%H:%M',
+                            hour: '%H:%M',
+                            day: '%Y-%m-%d',
+                            week: '%m-%d',
+                            month: '%Y-%m',
+                            year: '%Y'
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: '百分比'
+                        },
+                        max: 100,
+                        min: 0
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    plotOptions: {
+                        area: {
+                            fillColor: {
+                                linearGradient: {
+                                    x1: 0,
+                                    y1: 0,
+                                    x2: 0,
+                                    y2: 1
+                                },
+                                stops: [
+                                    [0, new Highcharts.getOptions().colors[0]],
+                                    [1, new Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                                ]
+                            },
+                            marker: {
+                                radius: 2
+                            },
+                            lineWidth: 1,
+                            states: {
+                                hover: {
+                                    lineWidth: 1
+                                }
+                            },
+                            threshold: null
+                        }
+                    },
+                    series: [{
+                        type: 'area',
+                        name: '内存使用率',
+                        data: data
+                    }]
+                }
+                Highcharts.chart('history-chart-memory', option)
+            }
+        },
+    })
+</script>
+
+</html>

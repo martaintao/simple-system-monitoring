@@ -59,7 +59,7 @@ python main.py
 
 #### 实时监控
 
-![实时监控](image/image-20201209203013421.png)
+![实时监控](https://gitee.com/MartainTao/pic/raw/master/20201209212157.png)
 
 > 实时监控功能实现了对CPU和内存的监控（虽然后台是模拟的，其实也可以用`psutil`库很容易来实现），前端分别轮询后端接口来实现图表实时数据的填充。
 
@@ -67,7 +67,7 @@ python main.py
 
 #### 历史记录
 
-![历史记录程序](image/image-20201209203107444.png)
+![历史记录程序](https://gitee.com/MartainTao/pic/raw/master/20201209212151.png)
 
 > 历史记录中通过请求后台接口，获取最近的100次记录。
 

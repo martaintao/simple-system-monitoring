@@ -77,3 +77,15 @@ python main.py
 
 ## 附文
 
+[在线demo地址](https://demo.martaintao.club/)
+
+> 为了方便部署，该项目中前端所有的依赖都所有的本地库的方式引入，所以访问在线demo会比较慢以及卡顿。
+
+[Github地址](https://github.com/martaintao/simple-system-monitoring)
+
+[Gitee地址](https://gitee.com/martainTao/simple-system-monitoring)
+
+[简书主页](https://www.jianshu.com/u/f1a625d3d89d)
+
+[个人博客站点](https://blog.martaintao.club/)
+

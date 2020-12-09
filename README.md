@@ -49,7 +49,7 @@
 ### 部署方式
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt # 安装gevent如果失败请升级pip
 python main.py
 ```
 
